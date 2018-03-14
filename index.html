@@ -1,0 +1,84 @@
+<html lang="en">
+<head>
+  <title>MEANING of LIFE</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+
+  <script src="lib/three.js"></script>
+  <script src="lib/EffectComposer.js"></script>
+  <script src="lib/RenderPass.js"></script>
+  <script src="lib/BloomPass.js"></script>
+  <script src="lib/ShaderPass.js"></script>
+  <script src="lib/CopyShader.js"></script>
+  <script src="lib/ConvolutionShader.js"></script>
+  <script src="index.js"></script>
+
+  <style>
+    body {
+      background-color: #000;
+      color: #fff;
+      margin: 0px;
+      overflow: hidden;
+      font-family:Monospace;
+      font-size:13px;
+      text-align:center;
+      font-weight: bold;
+      text-align:center;
+    }
+
+    a {
+      color:#0078ff;
+    }
+
+    #info {
+      color:#fff;
+      position: absolute;
+      top: 5px; width: 100%;
+      z-index:100;
+    }
+
+  </style>
+</head>
+
+<body>
+
+  <div id="info">
+    Test Website to display The Meaning Of Life
+  </div>
+
+
+  <video class="video" autoplay loop webkit-playsinline style="display:none">
+    <source src="assets/1.mp4" type='video/mp4'>
+  </video>
+
+  <video class="video" autoplay loop webkit-playsinline style="display:none">
+    <source src="assets/2.mp4" type='video/mp4'>
+  </video>
+
+  <video class="video" autoplay loop webkit-playsinline style="display:none">
+    <source src="assets/3.mp4" type='video/mp4'>
+  </video>
+
+  <video class="video" autoplay loop webkit-playsinline style="display:none">
+    <source src="assets/4.mp4" type='video/mp4'>
+  </video>
+
+  <video class="video" autoplay loop webkit-playsinline style="display:none">
+    <source src="assets/5.mp4" type='video/mp4'>
+  </video>
+
+  <video class="video" autoplay loop webkit-playsinline style="display:none">
+    <source src="assets/6.mp4" type='video/mp4'>
+  </video>
+
+  <script>
+    window.onload = function() {
+      init();
+      animate();
+    }
+
+  </script>
+
+</body>
+
+</html>
