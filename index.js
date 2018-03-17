@@ -23,7 +23,7 @@ var needs_play = -1;
 var active_pane = -1;
 
 var assets_base = 'assets/';
-var num_videos = 12;
+var num_videos = 11;
 
 var aspect_ratio = 16/9;
 var xsize = window.innerWidth * .9;
@@ -63,7 +63,7 @@ function init() {
   mouse = new THREE.Vector2();
 
   initVideoBackground('earth.mp4');
-  initVideoContent('fun');
+  initVideoContent('serious');
 
   window.addEventListener('resize', onWindowResize, false);
   window.addEventListener('click', onClick, false);
@@ -110,6 +110,7 @@ function initVideoContent(category) {
   $video_container = $('#video_container')[0];
   for (var i = 1; i <= num_videos; i++) {
     video_filename = `${assets_base}content/${category}/${i}.mp4`;
+    console.log(video_filename);
     $myEl = $(`
       <video class="video" crossorigin="anonymous" webkit-playsinline playsinline style="display:none">
         <source src="${video_filename}" type='video/mp4'>
