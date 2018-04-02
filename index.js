@@ -7,28 +7,18 @@ var up_vec = new THREE.Vector3(0, 1, 0);
 var windowHalfX = window.innerWidth / 2;
 var windowHalfY = window.innerHeight / 2;
 
-var video_els = [];
-var meshes = [];
-var materials = [];
-var textures = [];
-
 var bg_mesh;
 var bg_material;
 var bg_texture;
-
-var angles = [];
-var translations = [];
 
 var needs_play = -1;
 var active_pane = -1;
 
 var assets_base = 'assets/';
-var num_videos = 11;
 
 var aspect_ratio = 16/9;
 var xsize = window.innerWidth * .9;
 var ysize = xsize / aspect_ratio;
-var radius = xsize / (2 * Math.sin(Math.PI / num_videos));
 
 var translate_amount = xsize/2;
 var translate_speed = xsize/20;
@@ -39,8 +29,9 @@ function init() {
 
   clock = new THREE.Clock();
 
-  camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, radius*2);
+  camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, radius()*2);
   camera.position.y = 0.01;
+  camera.position.y = 100.01;
 
   scene = new THREE.Scene();
 
@@ -61,39 +52,41 @@ function init() {
 
   raycaster = new THREE.Raycaster();
   mouse = new THREE.Vector2();
+  
+  //onWindowResize();
 
-  initVideoBackground('earth.mp4');
-  initVideoContent('serious');
+  initStaticBackground('earth_night.jpg');
+  initVideoPanes();
+  initialAnimation();
 
   window.addEventListener('resize', onWindowResize, false);
-  window.addEventListener('click', onClick, false);
+  window.addEventListener('orientationchange', onWindowResize, false);
+  window.addEventListener('mousedown', onMousedown, false);
+  window.addEventListener('mouseup', onMouseup, false);
   window.addEventListener('touchstart', onTouchStart, false);
   window.addEventListener('touchstart', onTouchEnd, false);
 
   animate();
 }
 
-function initVideoBackground(name) {
-  $videoBG_container = $('#video_background')[0];
-  var video_element = $(`
-    <video id="video_bg" loop autoplay muted webkit-playsinline playsinline crossorigin="anonymous" style="display:none">
-      <source src="${assets_base}background/${name}">
-    </video>
-  `)[0];
-  $videoBG_container.append(video_element);
+function initialAnimation() {
+  controls.moveTo(0, 0.01, 0);
+  showPane(0);
+}
 
-  var geometry = new THREE.SphereBufferGeometry(radius * 1.1, 60, 40);
+function initStaticBackground(name) {
+  var geometry = new THREE.SphereBufferGeometry(radius() * 1.1, 60, 40);
 
-  var bg_video = document.getElementById('video_bg');
-
-  bg_texture = new THREE.VideoTexture(bg_video);
+  bg_texture = new THREE.TextureLoader().load(`${assets_base}backgrounds/${name}`)
   bg_texture.minFilter = THREE.LinearFilter;
   bg_texture.format = THREE.RGBFormat;
 
-  bg_material = new THREE.MeshBasicMaterial({
+  var materialProperties = {
     side: THREE.BackSide,
     map: bg_texture
-  });
+  };
+
+  bg_material = new THREE.MeshBasicMaterial(materialProperties);
 
   bg_mesh = new THREE.Mesh(geometry, bg_material);
 
@@ -102,69 +95,95 @@ function initVideoBackground(name) {
 
 function nextVideoFactory(i) {
   return function() {
-    showPane((i+1) % num_videos);
+    showPane((i+1) % window.VIDEOS.length);
   };
 }
 
-function initVideoContent(category) {
-  $video_container = $('#video_container')[0];
-  for (var i = 1; i <= num_videos; i++) {
-    video_filename = `${assets_base}content/${category}/${i}.mp4`;
-    console.log(video_filename);
-    $myEl = $(`
-      <video class="video" crossorigin="anonymous" webkit-playsinline playsinline style="display:none">
-        <source src="${video_filename}" type='video/mp4'>
-      </video>
-    `);
-    $myEl.on('ended', nextVideoFactory(i-1));
-    $video_container.append($myEl[0]);
+function getVideo(i) {
+  if (!window.VIDEOS[i].vidEl) {
+    loadVideo(i);
   }
+  return window.VIDEOS[i];
+}
 
-  videos = document.querySelectorAll('.video');
-  textures = []
-  videos.forEach((a_video) => {
-    my_texture = new THREE.VideoTexture(a_video);
-    my_texture.minFilter = THREE.LinearFilter;
-    my_texture.magFilter = THREE.LinearFilter;
-    my_texture.format = THREE.RGBFormat;
-    textures.push(my_texture);
-    video_els.push(a_video);
-    translations.push(0);
-  });
+function loadVideo(i) {
+  v = window.VIDEOS[i];
 
+  $video_container = $('#video_container')[0];
+  video_filename = v.vidFile;
+  console.log('loading ' + video_filename);
+  v.$vidEl = $(`
+    <video class="video" crossorigin="anonymous" webkit-playsinline playsinline style="display:none">
+      <source src="${video_filename}" type='video/mp4'>
+    </video>
+  `);
+  v.vidEl = v.$vidEl[0];
+  v.$vidEl.on('ended', nextVideoFactory(i-1));
+  $video_container.append(v.vidEl);
+
+  v.vidTexture = new THREE.VideoTexture(v.vidEl);
+  v.vidTexture.minFilter = THREE.LinearFilter;
+  v.vidTexture.magFilter = THREE.LinearFilter;
+  v.vidTexture.format = THREE.RGBFormat;
+  v.translation = 0;
+
+  var parameters = {
+    color: 0xffffff,
+    map: v.vidTexture
+  };
+
+  material = new THREE.MeshBasicMaterial(parameters);
+  v.vidMaterial = material;
+
+  v.mesh.material = v.vidMaterial;
+}
+
+function initVideoPanes() {
   var i, j, ox, oy, geometry;
 
   var angle = 0;
-  var angle_increment = 2 * Math.PI / num_videos;
+  var angle_increment = 2 * Math.PI / window.VIDEOS.length;
 
-  for (var i = 0; i < num_videos; i++) {
-    var parameters = {
-      color: 0xffffff,
-      map: textures[i]
-    };
+  for (var i = 0; i < window.VIDEOS.length; i++) {
+    window.VIDEOS[i] = Object.assign({
+      name: 'Intro',
+      picFile: 'assets/01_intro_thumb.jpg',
+      vidFile: 'assets/01_intro.mp4',
+      vidEl: false,
+      vidTexture: false,
+      vidMaterial: false,
+      vidTexture: false,
+      transition: 0,
+      angle: false,
+      mesh: false,
+      initialPosition: new THREE.Vector3()
+    }, window.VIDEOS[i]);
+    v = window.VIDEOS[i];
+    v.picTexture = new THREE.TextureLoader().load(v.picFile);
+    v.picTexture.minFilter = THREE.LinearFilter
+    v.picTexture.format = THREE.RGBFormat
 
     geometry = new THREE.BoxGeometry(xsize, ysize, 1);
-    material = new THREE.MeshBasicMaterial(parameters);
-    materials[i] = material;
+    v.picMaterial = new THREE.MeshBasicMaterial({
+      color: 0xffffff,
+      map: v.picTexture
+    });
 
-    mesh = new THREE.Mesh(geometry, material);
+    v.mesh = new THREE.Mesh(geometry, v.picMaterial);
 
-    mesh.scale.x = mesh.scale.y = mesh.scale.z = 1;
+    v.mesh.scale.x = v.mesh.scale.y = v.mesh.scale.z = 1;
 
-    mesh.position.y = 0;
-    mesh.position.x = -radius * Math.sin(angle);
-    mesh.position.z = radius * Math.cos(angle);
+    v.initialPosition.y = v.mesh.position.y = 0;
+    v.initialPosition.x = v.mesh.position.x = -radius() * Math.sin(angle);
+    v.initialPosition.z = v.mesh.position.z = radius() * Math.cos(angle);
+    v.mesh.position.z;
 
-    //console.log(i, mesh.position.x, mesh.position.z, angle / Math.PI, mesh.rotation.y)
-
-    angles[i] = -(angle + Math.PI);
+    v.angle = -(angle + Math.PI);
     angle += angle_increment;
 
-    scene.add(mesh);
+    scene.add(v.mesh);
 
-    mesh.lookAt(origin);
-
-    meshes[i] = mesh;
+    v.mesh.lookAt(origin);
   }
 }
 
@@ -174,66 +193,91 @@ function onWindowResize() {
 
   xsize = window.innerWidth * .9;
   ysize = xsize / aspect_ratio;
-  radius = xsize / (2 * Math.sin(Math.PI / num_videos));
 
   translate_amount = xsize/2;
   translate_speed = xsize/20;
 
+  renderer.setSize(window.innerWidth, window.innerHeight);
+
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
-
-  renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
 function showPane(i) {
-  if (i >= video_els.length) {
+  if (i >= window.VIDEOS.length) {
     console.warn(`tried to showPane(${i})`);
     i = 0;
   }
 
-  var targetAngle = angles[i];
-  controls.rotateTo(targetAngle, Math.PI/2, true);
+  v = getVideo(i);
+
+  controls.rotateTo(v.angle, Math.PI/2, true);
 
   if (active_pane == i) {
-    if (video_els[i].paused) {
-      video_els[i].play();
+    if (v.vidEl.paused) {
+      v.vidEl.play();
     } else {
-      video_els[i].pause();
+      v.vidEl.pause();
     }
     return;
   }
 
+  movement = radius() / 2;
+
   if (active_pane >= 0) {
-    translations[active_pane] -= translate_amount;
-    video_els[active_pane].pause();
+    window.VIDEOS[active_pane].translation -= movement;
+    window.VIDEOS[active_pane].vidEl.pause();
   }
 
-  active_pane = i % video_els.length;
-  translations[active_pane] += translate_amount;
+  active_pane = i % window.VIDEOS.length;
+  v.translation += movement;
   needs_play = active_pane;
 }
 
-var touch_start = {x: 0, y: 0};
+var touch_start = {x: 0, y: 0, time: 0};
 function onTouchStart(e) {
-  touch_start.x = e.touches[0].clientX;
-  touch_start.y = e.touches[0].clientY;
+  e.clientX = e.touches[0].clientX;
+  e.clientY = e.touches[0].clientY;
+  onMousedown(e);
+}
+
+function onMousedown(e) {
+  touch_start.x = e.clientX;
+  touch_start.y = e.clientY;
+  touch_start.time = new Date().getTime();
+  window.clickTimeout = setTimeout(handleClick.bind(e), 2000);
 }
 
 function onTouchEnd(e) {
-  if (Math.sqrt((e.touches[0].clientX - touch_start.x)^2 + (e.touches[0].clientY - touch_start.y)^2) < 10) {
-    e.clientX = e.touches[0].clientX;
-    e.clientY = e.touches[0].clientY;
-    onClick(e);
+  e.clientX = e.touches[0].clientX;
+  e.clientY = e.touches[0].clientY;
+  onMouseup(e);
+}
+
+function onMouseup(e) {
+  var now = new Date().getTime();
+  var touchTime = now - touch_start.time;
+  var dragDistance = Math.sqrt((e.clientX - touch_start.x)^2 + (e.clientY - touch_start.y)^2);
+  window.clearTimeout(window.clickTimeout);
+  if (touchTime > 500 && dragDistance < 10) {
+    //hold
+    e.preventDefault();
+    handleClick(e);
+  }
+  if (dragDistance < 10) {
+    //tap
+    e.preventDefault();
+    handleClick(e);
   }
 }
 
-function onClick(e) {
-  e.preventDefault();
-
-  mouse.x = ((e.clientX || e.touches[0].clientX) / renderer.domElement.clientWidth) * 2 - 1;
-  mouse.y = -((e.clientY || e.touches[0].clientY) / renderer.domElement.clientHeight) * 2 + 1;
+function handleClick(e) {
+  mouse.x = (e.clientX / renderer.domElement.clientWidth) * 2 - 1;
+  mouse.y = -(e.clientY / renderer.domElement.clientHeight) * 2 + 1;
 
   raycaster.setFromCamera(mouse, camera);
+
+  meshes = window.VIDEOS.map(v => v.mesh);
 
   var intersects = raycaster.intersectObjects(meshes);
 
@@ -241,28 +285,25 @@ function onClick(e) {
     var match_idx = meshes.indexOf(intersects[0].object);
     showPane(match_idx);
   }
-
-  // Parse all the faces
-  //for ( var i in intersects ) {
-  //  intersects[ i ].face.material[ 0 ].color.setHex( Math.random() * 0xffffff | 0x80000000 );
-  //}
+  touch_start = {x: 0, y: 0, time: 0};
 }
 
 function animate(new_time) {
   var delta = clock.getDelta();
 
   if (needs_play >= 0) {
-    video_els[needs_play].play();
+    window.VIDEOS[needs_play].vidEl.play();
     needs_play = -1;
   }
 
-  for (var i = 0; i < num_videos; i++) {
-    if (translations[i] > 0) {
-      meshes[i].translateZ(translate_speed);
-      translations[i] = Math.max(0, translations[i] - translate_speed);
-    } else if (translations[i] < 0) {
-      meshes[i].translateZ(-translate_speed);
-      translations[i] = Math.min(0, translations[i] + translate_speed);
+  for (var i = 0; i < window.VIDEOS.length; i++) {
+    var v = window.VIDEOS[i];
+    if (v.translation > 0) {
+      v.mesh.translateZ(translate_speed);
+      v.translation = Math.max(0, v.translation - translate_speed);
+    } else if (v.translation < 0) {
+      v.mesh.translateZ(-translate_speed);
+      v.translation = Math.min(0, v.translation + translate_speed);
     }
   }
 
@@ -273,3 +314,11 @@ function animate(new_time) {
   renderer.render(scene, camera);
 }
 
+function radius() {
+  if (window.VIDEOS.length) {
+    rad = xsize / (2 * Math.sin(Math.PI / window.VIDEOS.length));
+  } else {
+    rad = 0
+  }
+  return Math.max(rad, 300);
+}
