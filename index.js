@@ -222,11 +222,13 @@ function showPane(i) {
     return;
   }
 
-  movement = radius() / 2;
+  movement = radius() / 3;
 
   if (active_pane >= 0) {
-    window.VIDEOS[active_pane].translation -= movement;
-    window.VIDEOS[active_pane].vidEl.pause();
+    a = window.VIDEOS[active_pane];
+    z_dist = Math.sqrt((a.mesh.position.x - a.initialPosition.x)**2 + (a.mesh.position.z - a.initialPosition.z)**2);
+    a.translation -= z_dist;
+    a.vidEl.pause();
   }
 
   active_pane = i % window.VIDEOS.length;
