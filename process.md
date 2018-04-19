@@ -37,3 +37,8 @@ for i in *.mp4;
 	ffmpeg -i "$i" -ss 00:00:03 -t 1 -s 1920x864 -f mjpeg "${name}_thumb.jpg";
 done
 ```
+
+#### Fake Thumbnails (used for beach)
+```
+convert beach_emoji.png -resize 600x600 -negate -gravity center -background black -extent 1920x864 02_beach_thumb.jpg
+```

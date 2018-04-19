@@ -113,7 +113,7 @@ function loadVideo(i) {
   video_filename = v.vidFile;
   console.log('loading ' + video_filename);
   v.$vidEl = $(`
-    <video class="video" crossorigin="anonymous" webkit-playsinline playsinline style="display:none">
+    <video class="video" crossorigin="anonymous" webkit-playsinline playsinline>
       <source src="${video_filename}" type='video/mp4'>
     </video>
   `);
